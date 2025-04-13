@@ -509,28 +509,27 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 let dayClasses = 'calendar-day';
                 let eventHtml = '<div class="flex flex-wrap">'; // Use flex container for dots
+                let dayPhaseKey = null; // Store the phase key for the day cell
 
                  Object.entries(jetLagPlan).forEach(([phaseKey, phase]) => {
                      if (day >= phase.startDay && day <= phase.endDay) {
-                         let labelText = `Phase ${phase.phaseNumber}`;
-                         let eventContent = isMobile ? '&nbsp;' : labelText; // No text on mobile
+                         // Assign the first phase key encountered to the day cell
+                         if (dayPhaseKey === null) {
+                             dayPhaseKey = phaseKey;
+                         }
+
                          let eventClasses = `calendar-event ${phase.calendarEventClass}`;
-                         // Add data-phase-key back to the span for click handling
-                         if (day === phase.startDay || (day === 1 && phase.startDay === 1) || (day - phase.startDay) % 4 === 0 ) {
-                              if (!isMobile) {
-                                    eventHtml += `<span class="${eventClasses}" data-phase-key="${phaseKey}">${eventContent}</span>`;
-                              } else {
-                                    // On mobile, always add a dot if the phase covers the day
-                                    eventHtml += `<span class="${eventClasses}" data-phase-key="${phaseKey}"></span>`;
-                              }
+                         // Always add a visual dot indicator (no data needed on dot itself)
+                         if (!isMobile) {
+                            // Add text labels on desktop (example logic, could be simplified)
+                             if (day === phase.startDay || (day === 1 && phase.startDay === 1) || (day - phase.startDay) % 4 === 0 ) {
+                                 eventHtml += `<span class="${eventClasses}">${phase.phaseNumber}</span>`; // Show phase number on desktop
+                             } else {
+                                 eventHtml += `<span class="${eventClasses} opacity-40">&nbsp;</span>`; // Faded indicator
+                            }
                          } else {
-                              // Only show non-starting day indicators on desktop if needed
-                              if (!isMobile) {
-                                   eventHtml += `<span class="${eventClasses} opacity-60" data-phase-key="${phaseKey}">&nbsp;</span>`;
-                              } else {
-                                   // Add dot on mobile for continuation days too
-                                   eventHtml += `<span class="${eventClasses}" data-phase-key="${phaseKey}"></span>`;
-                              }
+                            // Just the colored dot on mobile
+                             eventHtml += `<span class="${eventClasses}"></span>`;
                          }
                      }
                 });
@@ -538,7 +537,14 @@
                  if (day === CURRENT_DAY) dayClasses += ' border-2 border-blue-500';
                 eventHtml += '</div>'; // Close flex container
 
-                calendarHtml += `<div class="${dayClasses}">
+                // Add phase key and cursor pointer to the day cell if applicable
+                 let dayAttributes = '';
+                 if (dayPhaseKey !== null) {
+                     dayAttributes = ` data-phase-key="${dayPhaseKey}"`;
+                     dayClasses += ' cursor-pointer'; // Add pointer cursor
+                 }
+
+                calendarHtml += `<div class="${dayClasses}"${dayAttributes}>
                                     <div class="day-number">${day}</div>
                                     ${eventHtml}
                                  </div>`;
@@ -669,8 +675,8 @@
         });
 
         // Click listener for Calendar View Events -> Show Modal
-        calendarContainer.addEventListener('click', (event) => {
-            const targetElement = event.target.closest('[data-phase-key]'); // Find clicked phase element
+        calendarContainer.addEventListener('click', (event) => { // Listen on container
+            const targetElement = event.target.closest('.calendar-day[data-phase-key]'); // Find clicked DAY CELL with key
             if (targetElement) {
                 event.preventDefault(); // Prevent potential default link behavior if any
                 const phaseKey = targetElement.dataset.phaseKey;
