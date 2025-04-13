@@ -185,6 +185,117 @@
 
         /* Ensure consistent font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        /* --- Responsive Adjustments --- */
+        @media (max-width: 768px) {
+            body {
+                 padding: 0.5rem; /* Reduced body padding */
+            }
+            .max-w-5xl {
+                border-radius: 0.5rem; /* Slightly smaller radius on mobile */
+            }
+            .bg-gradient-to-r.from-blue-500.to-indigo-600 {
+                padding: 1rem; /* Reduced header padding */
+            }
+            .bg-gradient-to-r.from-blue-500.to-indigo-600 h1 {
+                font-size: 1.25rem; /* Reduced main title size */
+            }
+             .bg-gradient-to-r.from-blue-500.to-indigo-600 p {
+                 font-size: 0.875rem; /* Reduced header paragraph size */
+            }
+
+            .view-tab {
+                padding-top: 0.5rem; padding-bottom: 0.5rem;
+                font-size: 0.875rem; /* Smaller tab text */
+            }
+            .view-tab i {
+                 margin-right: 0.25rem;
+            }
+
+            .timeline-segment {
+                padding-left: 0.75rem; padding-right: 0.75rem; /* Reduced timeline button padding */
+                font-size: 0.875rem;
+            }
+            .flex.flex-wrap.justify-center.p-3 {
+                padding: 0.5rem;
+            }
+
+            .view-content {
+                padding: 1rem; /* Reduced padding in view content areas */
+            }
+
+            /* Calendar Mobile */
+            .calendar-day {
+                min-height: 4.5rem; /* Reduced day height */
+                padding: 0.25rem;
+                font-size: 0.75rem;
+            }
+            .calendar-header {
+                font-size: 0.65rem;
+                padding: 0.3rem 0.1rem;
+            }
+             .day-number {
+                 font-size: 0.8rem;
+                 margin-bottom: 0.1rem;
+            }
+            .calendar-event {
+                font-size: 0.65rem; /* Smaller event text */
+                padding: 0.1rem 0.3rem; /* Tighter event padding */
+                margin-top: 0.15rem;
+                min-width: 40px;
+            }
+            .calendar-legend .legend-item span {
+                font-size: 0.7rem;
+            }
+
+            /* Gantt Mobile */
+            .gantt-chart {
+                padding: 0.5rem; /* Reduced Gantt padding */
+            }
+            .gantt-label {
+                font-size: 0.6rem; /* Smaller Gantt day labels */
+            }
+            .gantt-labels {
+                 margin-bottom: 0.5rem;
+                 padding-bottom: 0.25rem;
+            }
+            .gantt-row {
+                 height: 3rem; /* Slightly smaller row height */
+                 margin-bottom: 0.25rem;
+            }
+            .gantt-bar {
+                height: 2.25rem; /* Slightly taller bar for touch */
+                font-size: 0.75rem; /* Smaller text inside bar */
+                top: 0.375rem;
+            }
+            .gantt-bar span {
+                padding-left: 0.25rem; padding-right: 0.25rem;
+            }
+             .gantt-legend .legend-item span {
+                 font-size: 0.7rem;
+             }
+
+            /* Modal Mobile */
+            #advice-modal-card {
+                padding: 1rem;
+            }
+            #modal-advice-content h2 {
+                font-size: 1.1rem;
+            }
+             #modal-advice-content p {
+                 font-size: 0.9rem;
+             }
+             #modal-advice-content .advice-item {
+                 padding: 0.5rem;
+                 margin-bottom: 0.5rem;
+             }
+             #modal-advice-content .advice-icon {
+                 margin-right: 0.5rem;
+             }
+              #modal-advice-content .advice-icon i {
+                  font-size: 1rem;
+              }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
