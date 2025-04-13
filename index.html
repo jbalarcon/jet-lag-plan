@@ -183,6 +183,31 @@
             /* background-color: #f9fafb; */ /* Optional: slightly different bg */
         }
 
+        /* Modal Tab Styles */
+        #modal-tabs {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb; /* Gray-200 */
+            margin-bottom: 1rem;
+        }
+        .modal-tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px; /* Overlap border */
+            font-size: 0.9rem;
+            color: #6b7280; /* Gray-500 */
+            transition: all 0.2s ease;
+        }
+        .modal-tab:hover {
+             background-color: #f3f4f6; /* Gray-100 */
+             color: #374151; /* Gray-700 */
+        }
+        .modal-tab.active {
+             border-bottom-color: #3b82f6; /* Blue-500 */
+             color: #3b82f6;
+             font-weight: 600;
+        }
+
         /* Ensure consistent font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -509,15 +534,13 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 let dayClasses = 'calendar-day';
                 let eventHtml = '<div class="flex flex-wrap">'; // Use flex container for dots
-                let dayPhaseKey = null; // Store the phase key for the day cell
+                let dayPhaseKeys = []; // Store MULTIPLE phase keys for the day cell
 
                  Object.entries(jetLagPlan).forEach(([phaseKey, phase]) => {
                      if (day >= phase.startDay && day <= phase.endDay) {
                          // Assign the first phase key encountered to the day cell
-                         if (dayPhaseKey === null) {
-                             dayPhaseKey = phaseKey;
-                         }
-
+                         dayPhaseKeys.push(phaseKey); // Add all applicable keys
+                         
                          let eventClasses = `calendar-event ${phase.calendarEventClass}`;
                          // Always add a visual dot indicator (no data needed on dot itself)
                          if (!isMobile) {
@@ -539,8 +562,8 @@
 
                 // Add phase key and cursor pointer to the day cell if applicable
                  let dayAttributes = '';
-                 if (dayPhaseKey !== null) {
-                     dayAttributes = ` data-phase-key="${dayPhaseKey}"`;
+                 if (dayPhaseKeys.length > 0) {
+                     dayAttributes = ` data-phase-keys="${dayPhaseKeys.join(',')}"`; // Use comma-separated list
                      dayClasses += ' cursor-pointer'; // Add pointer cursor
                  }
 
@@ -621,35 +644,90 @@
         }
 
         // --- New Modal Functions ---
-        function showAdviceModal(phaseKey) {
-            const phaseData = jetLagPlan[phaseKey];
-            if (!phaseData) {
-                modalContentDiv.innerHTML = '<p class="text-red-500 text-center">Could not load advice for this phase.</p>';
-                modalOverlay.classList.add('visible');
-                return;
-            }
+        function showAdviceModal(phaseKeysString) {
+            const phaseKeys = phaseKeysString.split(',');
+            modalContentDiv.innerHTML = ''; // Clear previous content
 
-            let contentHtml = `
-                <h2 class="text-xl font-semibold mb-1 text-indigo-700">${phaseData.title}</h2>
-                <p class="text-sm text-gray-500 mb-3">${phaseData.dates}</p>
-                <p class="text-md font-semibold text-blue-600 mb-4">${phaseData.goal}</p>
-                <div class="space-y-3">`;
-            if (phaseData.advice && Array.isArray(phaseData.advice)) {
-                phaseData.advice.forEach(item => {
-                    contentHtml += `
-                        <div class="advice-item">
-                            <div class="advice-icon"><i class="${item.icon} fa-lg"></i></div>
-                            <div class="text-sm md:text-base text-gray-700">${item.text}</div>
-                        </div>`;
+            if (phaseKeys.length === 1) {
+                // Single phase - render directly
+                renderPhaseAdvice(phaseKeys[0], modalContentDiv);
+            } else if (phaseKeys.length > 1) {
+                // Multiple phases - render tabs and content areas
+                let tabsHtml = '<div id="modal-tabs">';
+                let contentAreaHtml = '<div id="modal-tab-content-area">';
+
+                phaseKeys.forEach((key, index) => {
+                    const phaseData = jetLagPlan[key];
+                    if (phaseData) {
+                        tabsHtml += `<button class="modal-tab ${index === 0 ? 'active' : ''}" data-target-phase="${key}">Phase ${phaseData.phaseNumber}</button>`;
+                        contentAreaHtml += `<div class="modal-tab-content ${index > 0 ? 'hidden' : ''}" id="content-${key}"></div>`;
+                    }
                 });
-            } else {
-                 contentHtml += `<p class="text-gray-500">No specific advice items available for this phase.</p>`;
-            }
-            contentHtml += `</div>`;
 
-            modalContentDiv.innerHTML = contentHtml;
+                tabsHtml += '</div>';
+                contentAreaHtml += '</div>';
+                modalContentDiv.innerHTML = tabsHtml + contentAreaHtml;
+
+                // Render content for the first tab initially
+                if (jetLagPlan[phaseKeys[0]]) {
+                     renderPhaseAdvice(phaseKeys[0], document.getElementById(`content-${phaseKeys[0]}`));
+                }
+
+                // Add tab click listener
+                const tabsContainer = modalContentDiv.querySelector('#modal-tabs');
+                tabsContainer.addEventListener('click', (event) => {
+                    if (event.target.classList.contains('modal-tab')) {
+                        const targetPhaseKey = event.target.dataset.targetPhase;
+
+                        // Update active tab style
+                        tabsContainer.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
+                        event.target.classList.add('active');
+
+                        // Hide all content, show target content
+                        modalContentDiv.querySelectorAll('.modal-tab-content').forEach(content => content.classList.add('hidden'));
+                        const targetContentDiv = modalContentDiv.querySelector(`#content-${targetPhaseKey}`);
+                        if (targetContentDiv) {
+                             // Render content if not already rendered (or re-render if needed)
+                             if (targetContentDiv.innerHTML.trim() === '') {
+                                 renderPhaseAdvice(targetPhaseKey, targetContentDiv);
+                             }
+                            targetContentDiv.classList.remove('hidden');
+                        }
+                    }
+                });
+            }
+
             modalOverlay.classList.add('visible');
         }
+
+        // Helper function to render advice for a single phase into a target container
+        function renderPhaseAdvice(phaseKey, targetContainer) {
+             const phaseData = jetLagPlan[phaseKey];
+              if (!phaseData) {
+                 targetContainer.innerHTML = '<p class="text-red-500 text-center">Could not load advice for this phase.</p>';
+                 return;
+              }
+ 
+              let contentHtml = `
+                 <h2 class="text-xl font-semibold mb-1 text-indigo-700">${phaseData.title}</h2>
+                 <p class="text-sm text-gray-500 mb-3">${phaseData.dates}</p>
+                 <p class="text-md font-semibold text-blue-600 mb-4">${phaseData.goal}</p>
+                 <div class="space-y-3">`;
+              if (phaseData.advice && Array.isArray(phaseData.advice)) {
+                  phaseData.advice.forEach(item => {
+                      contentHtml += `
+                          <div class="advice-item">
+                              <div class="advice-icon"><i class="${item.icon} fa-lg"></i></div>
+                              <div class="text-sm md:text-base text-gray-700">${item.text}</div>
+                          </div>`;
+                  });
+              } else {
+                   contentHtml += `<p class="text-gray-500">No specific advice items available for this phase.</p>`;
+              }
+              contentHtml += `</div>`;
+ 
+              targetContainer.innerHTML = contentHtml;
+         }
 
         function hideAdviceModal() {
             modalOverlay.classList.remove('visible');
@@ -676,11 +754,11 @@
 
         // Click listener for Calendar View Events -> Show Modal
         calendarContainer.addEventListener('click', (event) => { // Listen on container
-            const targetElement = event.target.closest('.calendar-day[data-phase-key]'); // Find clicked DAY CELL with key
+            const targetElement = event.target.closest('.calendar-day[data-phase-keys]'); // Find clicked DAY CELL with keys
             if (targetElement) {
                 event.preventDefault(); // Prevent potential default link behavior if any
-                const phaseKey = targetElement.dataset.phaseKey;
-                showAdviceModal(phaseKey);
+                const phaseKeysString = targetElement.dataset.phaseKeys;
+                showAdviceModal(phaseKeysString);
             }
         });
 
