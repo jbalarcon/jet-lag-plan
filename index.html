@@ -239,10 +239,16 @@
                  margin-bottom: 0.1rem;
             }
             .calendar-event {
-                font-size: 0.65rem; /* Smaller event text */
-                padding: 0.1rem 0.3rem; /* Tighter event padding */
+                /* Display as small squares/dots */
+                font-size: 0; /* Hide text */
+                padding: 0;
+                width: 0.6rem; /* Dot size */
+                height: 0.6rem; /* Dot size */
+                border-radius: 0.125rem; /* Slightly rounded square */
                 margin-top: 0.15rem;
-                min-width: 40px;
+                margin-right: 0.15rem; /* Spacing between dots */
+                min-width: auto;
+                display: inline-block; /* Allow multiple dots */
             }
             .calendar-legend .legend-item span {
                 font-size: 0.7rem;
@@ -269,6 +275,8 @@
                 top: 0.375rem;
             }
             .gantt-bar span {
+                /* Hide text inside gantt bars on mobile */
+                display: none;
                 padding-left: 0.25rem; padding-right: 0.25rem;
             }
              .gantt-legend .legend-item span {
@@ -295,6 +303,11 @@
               #modal-advice-content .advice-icon i {
                   font-size: 1rem;
               }
+
+            /* Hide odd-numbered date labels */
+            .gantt-labels .gantt-label:nth-child(odd) {
+                 visibility: hidden;
+            }
         }
     </style>
 </head>
@@ -484,29 +497,44 @@
             const daysInMonth = new Date(YEAR, MONTH + 1, 0).getDate();
             const firstDayOfMonth = new Date(YEAR, MONTH, 1).getDay();
             const adjustedFirstDay = (firstDayOfMonth === 0) ? 6 : firstDayOfMonth - 1;
+            const isMobile = window.matchMedia("(max-width: 768px)").matches;
 
             let calendarHtml = '<div class="calendar-grid">';
-            const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const daysOfWeek = isMobile ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
             daysOfWeek.forEach(day => { calendarHtml += `<div class="calendar-header">${day}</div>`; });
             for (let i = 0; i < adjustedFirstDay; i++) { calendarHtml += '<div class="calendar-day other-month"></div>'; }
 
             for (let day = 1; day <= daysInMonth; day++) {
                 let dayClasses = 'calendar-day';
-                let eventHtml = '';
+                let eventHtml = '<div class="flex flex-wrap">'; // Use flex container for dots
 
                  Object.entries(jetLagPlan).forEach(([phaseKey, phase]) => {
                      if (day >= phase.startDay && day <= phase.endDay) {
                          let labelText = `Phase ${phase.phaseNumber}`;
+                         let eventContent = isMobile ? '&nbsp;' : labelText; // No text on mobile
+                         let eventClasses = `calendar-event ${phase.calendarEventClass}`;
                          // Add data-phase-key back to the span for click handling
                          if (day === phase.startDay || (day === 1 && phase.startDay === 1) || (day - phase.startDay) % 4 === 0 ) {
-                              eventHtml += `<span class="calendar-event ${phase.calendarEventClass}" data-phase-key="${phaseKey}">${labelText}</span>`;
+                              if (!isMobile) {
+                                    eventHtml += `<span class="${eventClasses}" data-phase-key="${phaseKey}">${eventContent}</span>`;
+                              } else {
+                                    // On mobile, always add a dot if the phase covers the day
+                                    eventHtml += `<span class="${eventClasses}" data-phase-key="${phaseKey}"></span>`;
+                              }
                          } else {
-                              eventHtml += `<span class="calendar-event ${phase.calendarEventClass} opacity-60" data-phase-key="${phaseKey}">&nbsp;</span>`;
+                              // Only show non-starting day indicators on desktop if needed
+                              if (!isMobile) {
+                                   eventHtml += `<span class="${eventClasses} opacity-60" data-phase-key="${phaseKey}">&nbsp;</span>`;
+                              } else {
+                                   // Add dot on mobile for continuation days too
+                                   eventHtml += `<span class="${eventClasses}" data-phase-key="${phaseKey}"></span>`;
+                              }
                          }
                      }
                 });
 
                  if (day === CURRENT_DAY) dayClasses += ' border-2 border-blue-500';
+                eventHtml += '</div>'; // Close flex container
 
                 calendarHtml += `<div class="${dayClasses}">
                                     <div class="day-number">${day}</div>
