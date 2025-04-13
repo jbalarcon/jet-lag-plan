@@ -119,7 +119,12 @@
             display: flex; align-items: center; justify-content: center;
             color: white; font-size: 0.875rem; font-weight: 500;
             white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            /* Not clickable */
+            cursor: pointer; /* Make bars clickable */
+            transition: all 0.2s ease;
+        }
+        .gantt-bar:hover {
+            filter: brightness(1.1); /* Slightly brighten on hover */
+            transform: translateY(-1px);
         }
         .gantt-labels {
             display: grid; padding-bottom: 0.5rem; border-bottom: 1px solid #e5e7eb;
@@ -131,7 +136,52 @@
         .legend-item { display: flex; align-items: center; margin-bottom: 0.25rem; }
         .legend-color-box { width: 0.75rem; height: 0.75rem; border-radius: 0.125rem; margin-right: 0.5rem; flex-shrink: 0; }
 
-        /* --- Advice Card Modal Styles (REMOVED) --- */
+        /* --- Advice Card Modal Styles --- */
+        #advice-modal-overlay {
+            position: fixed; inset: 0; /* Covers the whole screen */
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black */
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+            opacity: 0; visibility: hidden; /* Hidden by default */
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 50;
+        }
+        #advice-modal-overlay.visible {
+            opacity: 1; visibility: visible; /* Make visible */
+        }
+        #advice-modal-card {
+            background-color: white;
+            border-radius: 0.75rem; /* Slightly larger radius */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            padding: 1.5rem;
+            width: 100%; max-width: 500px; /* Limit width */
+            max-height: 90vh; /* Limit height */
+            overflow-y: auto; /* Scroll if content overflows */
+            position: relative; /* For absolute positioning of close button */
+            transform: scale(0.95); /* Start slightly scaled down */
+            transition: transform 0.3s ease;
+        }
+        #advice-modal-overlay.visible #advice-modal-card {
+            transform: scale(1); /* Scale to normal size */
+        }
+        #modal-close-btn {
+            position: absolute; top: 0.75rem; right: 0.75rem;
+            background-color: #e5e7eb; /* Light gray */
+            color: #4b5563; /* Darker gray */
+            border: none; border-radius: 9999px; /* Circle */
+            width: 1.75rem; height: 1.75rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        #modal-close-btn:hover {
+            background-color: #d1d5db; /* Medium gray */
+            color: #1f2937; /* Darker gray */
+        }
+        #modal-advice-content .advice-item { /* Re-use advice item styles */
+            /* background-color: #f9fafb; */ /* Optional: slightly different bg */
+        }
 
         /* Ensure consistent font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -200,6 +250,16 @@
         </div>
     </div>
 
+    <!-- Advice Modal -->
+    <div id="advice-modal-overlay">
+        <div id="advice-modal-card">
+            <button id="modal-close-btn">&times;</button>
+            <div id="modal-advice-content">
+                <!-- Content will be injected by JavaScript -->
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- Constants ---
         const YEAR = 2025;
@@ -253,7 +313,10 @@
         const ganttContainer = document.getElementById('gantt-chart-container');
         const calendarLegendContainer = document.getElementById('calendar-legend');
         const ganttLegendContainer = document.getElementById('gantt-legend');
-        // Modal elements are removed
+        // Modal elements
+        const modalOverlay = document.getElementById('advice-modal-overlay');
+        const modalContentDiv = document.getElementById('modal-advice-content');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
 
 
         // --- Functions ---
@@ -348,7 +411,7 @@
             calendarLegendContainer.innerHTML = generateLegendHtml();
         }
 
-        // Function to generate Gantt View (No changes needed here)
+        // Function to generate Gantt View (Adds data-phase-key to bars)
         function displayGanttView() {
             const ganttStartDate = 13;
             const ganttEndDate = 28;
@@ -381,6 +444,7 @@
                     barsHtml += `
                         <div class="gantt-row">
                             <div class="gantt-bar ${phase.ganttColorClass}"
+                                 data-phase-key="${phaseKey}"
                                  style="left: ${leftPercent}%; width: ${widthPercent}%; top: 0.75rem;">
                                 <span class="px-2">Phase ${phase.phaseNumber}</span>
                             </div>
@@ -409,6 +473,45 @@
             }
         }
 
+        // --- New Modal Functions ---
+        function showAdviceModal(phaseKey) {
+            const phaseData = jetLagPlan[phaseKey];
+            if (!phaseData) {
+                modalContentDiv.innerHTML = '<p class="text-red-500 text-center">Could not load advice for this phase.</p>';
+                modalOverlay.classList.add('visible');
+                return;
+            }
+
+            let contentHtml = `
+                <h2 class="text-xl font-semibold mb-1 text-indigo-700">${phaseData.title}</h2>
+                <p class="text-sm text-gray-500 mb-3">${phaseData.dates}</p>
+                <p class="text-md font-semibold text-blue-600 mb-4">${phaseData.goal}</p>
+                <div class="space-y-3">`;
+            if (phaseData.advice && Array.isArray(phaseData.advice)) {
+                phaseData.advice.forEach(item => {
+                    contentHtml += `
+                        <div class="advice-item">
+                            <div class="advice-icon"><i class="${item.icon} fa-lg"></i></div>
+                            <div class="text-sm md:text-base text-gray-700">${item.text}</div>
+                        </div>`;
+                });
+            } else {
+                 contentHtml += `<p class="text-gray-500">No specific advice items available for this phase.</p>`;
+            }
+            contentHtml += `</div>`;
+
+            modalContentDiv.innerHTML = contentHtml;
+            modalOverlay.classList.add('visible');
+        }
+
+        function hideAdviceModal() {
+            modalOverlay.classList.remove('visible');
+            // Optional: Clear content after fade out animation completes
+            setTimeout(() => {
+                 modalContentDiv.innerHTML = '';
+            }, 300); // Should match CSS transition duration
+        }
+
         // --- Event Listeners ---
         // Timeline phase selection
         timelineSegments.forEach(segment => {
@@ -424,21 +527,34 @@
             });
         });
 
-        // Click listener ONLY for Calendar View (New Logic)
+        // Click listener for Calendar View Events -> Show Modal
         calendarContainer.addEventListener('click', (event) => {
             const targetElement = event.target.closest('[data-phase-key]'); // Find clicked phase element
             if (targetElement) {
+                event.preventDefault(); // Prevent potential default link behavior if any
                 const phaseKey = targetElement.dataset.phaseKey;
-                // 1. Switch view to 'timeline'
-                switchView('timeline');
-                // 2. Display the advice for the clicked phase in the timeline view
-                // Use setTimeout to ensure the view switch has rendered before updating advice,
-                // although it might work without it in many cases. 10ms is usually enough.
-                setTimeout(() => {
-                     displayTimelineAdvice(phaseKey);
-                }, 10);
+                showAdviceModal(phaseKey);
             }
         });
+
+        // Click listener for Gantt View Bars -> Show Modal
+        ganttContainer.addEventListener('click', (event) => {
+             const targetElement = event.target.closest('[data-phase-key]'); // Find clicked phase bar
+             if (targetElement) {
+                 event.preventDefault();
+                 const phaseKey = targetElement.dataset.phaseKey;
+                 showAdviceModal(phaseKey);
+             }
+        });
+
+         // Modal Close Listeners
+         modalCloseBtn.addEventListener('click', hideAdviceModal);
+         modalOverlay.addEventListener('click', (event) => {
+             // Close only if clicked directly on the overlay, not the card itself
+             if (event.target === modalOverlay) {
+                 hideAdviceModal();
+             }
+         });
 
         // --- Initial Load ---
         displayTimelineAdvice('pre-paris-ny');
