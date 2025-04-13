@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Jet Lag Plan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* Custom Styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        /* --- Tab Styles --- */
+        .view-tab {
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        .view-tab.active {
+            border-bottom-color: #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .view-tab:hover {
+             background-color: #e0e7ff;
+        }
+
+        /* --- Timeline View Styles --- */
+        .timeline-segment {
+            transition: all 0.3s ease;
+            cursor: pointer; /* Ensure pointer */
+        }
+        .timeline-segment.active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .advice-item {
+            display: flex;
+            align-items: center; /* Vertically center icon and text */
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            min-height: 2.5rem; /* Ensure items don't collapse */
+        }
+        .advice-icon {
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+            width: 1.5rem;
+            text-align: center;
+            color: #3b82f6;
+        }
+
+        /* --- Calendar View Styles --- */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 1px;
+            background-color: #d1d5db;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+        }
+        .calendar-header {
+            text-align: center; font-weight: 600; padding: 0.5rem 0.25rem;
+            background-color: #f3f4f6; font-size: 0.75rem; color: #4b5563;
+        }
+        .calendar-day {
+            background-color: #ffffff; padding: 0.5rem; min-height: 6rem;
+            position: relative; font-size: 0.875rem;
+        }
+        .calendar-day.other-month { background-color: #f9fafb; color: #9ca3af; }
+        .day-number { font-weight: 600; margin-bottom: 0.25rem; }
+        .calendar-event {
+            font-size: 0.75rem; padding: 0.125rem 0.5rem; /* Adjusted padding slightly */
+            border-radius: 9999px;
+            margin-top: 0.25rem;
+            /* Use inline-flex for centering */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer; /* Indicate clickable */
+            min-width: 50px; /* Give it some minimum width */
+            text-align: center;
+            transition: background-color 0.2s ease; /* Add hover effect */
+        }
+         .calendar-event:hover {
+             opacity: 0.85; /* Slight fade on hover */
+         }
+        /* Specific event colors */
+        .event-pre-adapt-west { background-color: #fed7aa; color: #9a3412; }
+        .event-travel-west { background-color: #60a5fa; color: #1e3a8a; }
+        .event-adjust-ny { background-color: #a7f3d0; color: #065f46; }
+        .event-pre-adapt-east { background-color: #fecaca; color: #991b1b; }
+        .event-travel-east { background-color: #60a5fa; color: #1e3a8a; }
+        .event-adjust-paris { background-color: #a5b4fc; color: #3730a3; }
+
+        /* --- Gantt View Styles --- */
+        .gantt-chart {
+            position: relative; background-color: #f9fafb; border-radius: 0.5rem;
+            padding: 1rem; overflow-x: auto;
+        }
+        .gantt-grid {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: grid; border-left: 1px solid #e5e7eb;
+        }
+        .gantt-grid-line { border-right: 1px dashed #e5e7eb; }
+        .gantt-row {
+            position: relative; height: 3.5rem; margin-bottom: 0.5rem;
+            display: flex; align-items: center;
+        }
+        .gantt-bar {
+            position: absolute; height: 2rem; border-radius: 0.375rem;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 0.875rem; font-weight: 500;
+            white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            /* Not clickable */
+        }
+        .gantt-labels {
+            display: grid; padding-bottom: 0.5rem; border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 1rem;
+        }
+        .gantt-label { font-size: 0.75rem; color: #6b7280; text-align: center; }
+
+        /* --- Legend Styles --- */
+        .legend-item { display: flex; align-items: center; margin-bottom: 0.25rem; }
+        .legend-color-box { width: 0.75rem; height: 0.75rem; border-radius: 0.125rem; margin-right: 0.5rem; flex-shrink: 0; }
+
+        /* --- Advice Card Modal Styles (REMOVED) --- */
+
+        /* Ensure consistent font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-white">
+             <h1 class="text-2xl md:text-3xl font-bold mb-2">Your Interactive Jet Lag Plan</h1>
+            <p class="text-sm md:text-base"><i class="fas fa-plane-departure mr-2"></i>Paris (CDG) <i class="fas fa-arrow-right mx-1"></i> London (LHR) <i class="fas fa-arrow-right mx-1"></i> New York (JFK)</p>
+            <p class="text-sm md:text-base"><i class="fas fa-calendar-alt mr-2"></i>Departure: Thu, Apr 17th, 16:10 (Paris)</p>
+            <p class="text-sm md:text-base"><i class="fas fa-plane-arrival mr-2"></i>New York (JFK) <i class="fas fa-arrow-right mx-1"></i> Paris (CDG)</p>
+            <p class="text-sm md:text-base"><i class="fas fa-calendar-alt mr-2"></i>Return: Fri, Apr 25th, 21:30 (NY)</p>
+            <p class="text-sm md:text-base font-semibold mt-2"><i class="fas fa-clock mr-2"></i>Time Difference: NY is 6 hours behind Paris</p>
+        </div>
+
+        <div class="flex border-b border-gray-200 bg-gray-50">
+            <button data-view="timeline" class="view-tab flex-1 py-3 px-4 text-center text-sm md:text-base text-gray-600 hover:bg-gray-100 active">
+                <i class="fas fa-list-ul mr-1 md:mr-2"></i>Timeline View
+            </button>
+            <button data-view="calendar" class="view-tab flex-1 py-3 px-4 text-center text-sm md:text-base text-gray-600 hover:bg-gray-100">
+                <i class="fas fa-calendar-alt mr-1 md:mr-2"></i>Calendar View
+            </button>
+            <button data-view="gantt" class="view-tab flex-1 py-3 px-4 text-center text-sm md:text-base text-gray-600 hover:bg-gray-100">
+                <i class="fas fa-chart-bar mr-1 md:mr-2"></i>Gantt View
+            </button>
+        </div>
+
+        <div id="view-container">
+            <div id="timeline-view" class="view-content">
+                <div class="flex flex-wrap justify-center bg-gray-100 p-3 gap-2 shadow-inner">
+                    <button data-phase="pre-paris-ny" class="timeline-segment text-sm md:text-base flex-grow md:flex-grow-0 px-4 py-2 bg-white rounded-full shadow hover:bg-blue-100">Pre-Flight (Paris)</button>
+                    <button data-phase="flight-paris-ny" class="timeline-segment text-sm md:text-base flex-grow md:flex-grow-0 px-4 py-2 bg-white rounded-full shadow hover:bg-blue-100">Flight Paris <i class="fas fa-arrow-right mx-1"></i> NY</button>
+                    <button data-phase="arrival-ny" class="timeline-segment text-sm md:text-base flex-grow md:flex-grow-0 px-4 py-2 bg-white rounded-full shadow hover:bg-blue-100">Arrival & Days in NY</button>
+                    <button data-phase="pre-ny-paris" class="timeline-segment text-sm md:text-base flex-grow md:flex-grow-0 px-4 py-2 bg-white rounded-full shadow hover:bg-blue-100">Pre-Flight (NY)</button>
+                    <button data-phase="flight-ny-paris" class="timeline-segment text-sm md:text-base flex-grow md:flex-grow-0 px-4 py-2 bg-white rounded-full shadow hover:bg-blue-100">Flight NY <i class="fas fa-arrow-right mx-1"></i> Paris</button>
+                    <button data-phase="arrival-paris" class="timeline-segment text-sm md:text-base flex-grow md:flex-grow-0 px-4 py-2 bg-white rounded-full shadow hover:bg-blue-100">Arrival & Days in Paris</button>
+                </div>
+                <div id="advice-content" class="p-6 bg-gray-50">
+                    <p class="text-gray-500 text-center">Select a phase from the timeline above to see the recommendations.</p>
+                </div>
+            </div>
+
+            <div id="calendar-view" class="view-content hidden p-6 bg-gray-50">
+                <h2 class="text-xl md:text-2xl font-semibold mb-4 text-center text-indigo-700">April 2025 - Trip Overview</h2>
+                <div id="calendar-grid-container" class="mb-4">
+                    </div>
+                 <div id="calendar-legend" class="text-xs space-y-1 border-t pt-3 mt-3">
+                     <h3 class="font-semibold text-sm mb-2 text-gray-700">Legend:</h3>
+                     </div>
+            </div>
+
+            <div id="gantt-view" class="view-content hidden p-6 bg-gray-50">
+                 <h2 class="text-xl md:text-2xl font-semibold mb-4 text-center text-indigo-700">Trip Phases - Gantt View</h2>
+                 <div id="gantt-chart-container" class="mb-4">
+                     </div>
+                 <div id="gantt-legend" class="text-xs space-y-1 border-t pt-3 mt-3">
+                     <h3 class="font-semibold text-sm mb-2 text-gray-700">Legend:</h3>
+                      </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-100 p-4 text-xs text-gray-600 border-t border-gray-200">
+            <i class="fas fa-info-circle mr-1"></i> This plan provides general advice. Consult your doctor before taking any supplements like melatonin or if you have underlying health conditions.
+        </div>
+    </div>
+
+    <script>
+        // --- Constants ---
+        const YEAR = 2025;
+        const MONTH = 3; // 0-indexed for JS Date (April is 3)
+        const DEPARTURE_DAY_PARIS = 17;
+        const RETURN_DAY_NY = 25;
+        const CURRENT_DAY = 13; // Assuming today is April 13th
+
+        // --- Data for the Jet Lag Plan (Added phaseNumber) ---
+        const jetLagPlan = {
+            // Phase Key: { phaseNumber, title, dates, goal, advice array, startDay, endDay, ganttColorClass, calendarEventClass }
+            "pre-paris-ny": {
+                phaseNumber: 1, title: "Phase 1: Pre-Flight Preparation (Paris)", dates: "Apr 13th - Apr 16th", goal: "Goal: Start shifting clock LATER (Westbound)",
+                advice: [ { icon: "fa-solid fa-moon", text: "<strong>Gradual Shift (Optional):</strong> Try going to bed & waking up 30-60 mins later each day." },{ icon: "fa-solid fa-lightbulb", text: "<strong>Light Exposure:</strong> Maximize light later in the day/evening. Avoid bright light first thing in the morning." },{ icon: "fa-solid fa-bed", text: "<strong>Sleep Hygiene:</strong> Prioritize good quality sleep. Being rested helps!" },{ icon: "fa-solid fa-droplet", text: "<strong>Hydration:</strong> Start increasing water intake now." },{ icon: "fa-solid fa-suitcase", text: "<strong>Pack Smart:</strong> Remember eye mask, earplugs, neck pillow." },{ icon: "fa-solid fa-clock", text: "<strong>Wed Night:</strong> Try to stay up 1-2 hours later than usual. Get solid sleep." } ],
+                startDay: 13, endDay: 16, ganttColorClass: 'bg-orange-400', calendarEventClass: 'event-pre-adapt-west'
+            },
+            "flight-paris-ny": {
+                phaseNumber: 2, title: "Phase 2: Outbound Flight (Paris -> London -> NY)", dates: "Thu, Apr 17th", goal: "Goal: Stay awake, adjust to NY time",
+                advice: [ { icon: "fa-solid fa-stopwatch", text: "<strong>CRITICAL: Set Watch to NY Time (EDT)</strong> as soon as you board or settle in. Think NY time!" },{ icon: "fa-solid fa-droplet", text: "<strong>Hydrate Constantly:</strong> Drink plenty of water. Avoid alcohol, limit caffeine." },{ icon: "fa-solid fa-person-walking", text: "<strong>Move Around:</strong> Walk in the cabin periodically." },{ icon: "fa-solid fa-utensils", text: "<strong>Light Meals:</strong> Eat light. Try timing meals to NY schedule (lunch ~1pm NY, dinner later)." },{ icon: "fa-solid fa-sun", text: "<strong>Seek Light (NY Daytime):</strong> Keep shade open or use cabin lights if it's daytime in NY." },{ icon: "fa-solid fa-power-off", text: "<strong>Stay Awake:</strong> Resist long sleep. Short naps (20-30 min) okay if needed. Aim to arrive tired for NY bedtime." } ],
+                startDay: 17, endDay: 17, ganttColorClass: 'bg-blue-500', calendarEventClass: 'event-travel-west'
+            },
+            "arrival-ny": {
+                phaseNumber: 3, title: "Phase 3: Arrival & First Days in New York", dates: "Apr 17th Eve - Apr 22nd", goal: "Goal: Anchor to NY time zone",
+                advice: [ { icon: "fa-solid fa-sun", text: "<strong>Arrival Light:</strong> Get natural light if possible upon arrival. Use bright indoor lights if dark." },{ icon: "fa-solid fa-bed", text: "<strong>Stay Awake:</strong> Try to stay up until at least 9-10 PM NY time on arrival night." },{ icon: "fa-solid fa-utensils", text: "<strong>Local Meal Times:</strong> Eat a light dinner at NY time. Stick to local meal times going forward." },{ icon: "fa-solid fa-cloud-sun", text: "<strong>CRITICAL: Morning Light:</strong> Get bright daylight exposure ASAP after waking up for the first few days in NY." },{ icon: "fa-solid fa-person-walking", text: "<strong>Stay Active:</strong> Gentle exercise during the day helps. Avoid strenuous activity near bedtime." },{ icon: "fa-solid fa-clock", text: "<strong>Naps:</strong> Short naps (20-30 min) only if absolutely necessary. Avoid late-day naps." },{ icon: "fa-solid fa-moon", text: "<strong>Evening Routine:</strong> Dim lights in the evening. Avoid screens before bed." } ],
+                startDay: 17, endDay: 22, ganttColorClass: 'bg-emerald-400', calendarEventClass: 'event-adjust-ny'
+            },
+             "pre-ny-paris": {
+                phaseNumber: 4, title: "Phase 4: Pre-Flight Preparation (New York)", dates: "Apr 23rd - Apr 24th", goal: "Goal: Start shifting clock EARLIER (Eastbound)",
+                advice: [ { icon: "fa-solid fa-moon", text: "<strong>Gradual Shift:</strong> Try going to bed & waking up 30-60 mins *earlier* each day." },{ icon: "fa-solid fa-sun", text: "<strong>Light Exposure:</strong> Maximize bright light in the *morning*. Dim lights/avoid screens earlier in the evening." },{ icon: "fa-solid fa-bed", text: "<strong>Sleep Hygiene:</strong> Ensure you are well-rested before the return flight." } ],
+                startDay: 23, endDay: 24, ganttColorClass: 'bg-red-400', calendarEventClass: 'event-pre-adapt-east'
+            },
+            "flight-ny-paris": {
+                phaseNumber: 5, title: "Phase 5: Inbound Flight (NY -> Paris)", dates: "Fri, Apr 25th (Overnight)", goal: "Goal: Maximize sleep, adjust to Paris time",
+                advice: [ { icon: "fa-solid fa-stopwatch", text: "<strong>CRITICAL: Set Watch to Paris Time (CEST)</strong> upon boarding. Think Paris time!" },{ icon: "fa-solid fa-bed", text: "<strong>Prioritize Sleep:</strong> Try to sleep ASAP after takeoff/meal. It's night in Paris. Use eye mask, earplugs." },{ icon: "fa-solid fa-martini-glass-empty", text: "<strong>Avoid Alcohol/Caffeine:</strong> These disrupt sleep." },{ icon: "fa-solid fa-droplet", text: "<strong>Hydrate When Awake:</strong> Drink water if you are awake." },{ icon: "fa-solid fa-lightbulb", text: "<strong>Morning Light (Paris Time):</strong> If awake when it's morning in Paris, seek light (overhead light, open shade briefly if appropriate)." } ],
+                startDay: 25, endDay: 25, ganttColorClass: 'bg-blue-500', calendarEventClass: 'event-travel-east'
+            },
+            "arrival-paris": {
+                phaseNumber: 6, title: "Phase 6: Arrival & First Days in Paris", dates: "Apr 26th onwards", goal: "Goal: Re-anchor to Paris time zone (Tougher!)",
+                advice: [ { icon: "fa-solid fa-person-walking", text: "<strong>CRITICAL: Stay Awake & Get Daylight:</strong> Do NOT nap upon arrival. Go outside immediately." },{ icon: "fa-solid fa-utensils", text: "<strong>Local Meal Times:</strong> Eat lunch/dinner at normal Paris times. Keep meals light." },{ icon: "fa-solid fa-bed", text: "<strong>Push Through:</strong> Stay awake until your normal Paris bedtime (e.g., 10-11 PM). This is key!" },{ icon: "fa-solid fa-cloud-sun", text: "<strong>CRITICAL: Morning Light:</strong> Get bright daylight exposure ASAP after waking up for the next few days." },{ icon: "fa-solid fa-clock", text: "<strong>Avoid Naps:</strong> If essential, keep naps very short (20 min max) and not late in the day." },{ icon: "fa-solid fa-moon", text: "<strong>Evening Routine:</strong> Wind down normally. Avoid bright lights/screens before bed." },{ icon: "fa-solid fa-hourglass-half", text: "<strong>Be Patient:</strong> Eastbound adjustment takes longer. Stick to the plan." } ],
+                startDay: 26, endDay: 28, ganttColorClass: 'bg-indigo-400', calendarEventClass: 'event-adjust-paris'
+            }
+        };
+
+        // --- DOM Elements ---
+        // Ensure elements are selected after DOM is ready
+        const timelineSegments = document.querySelectorAll('.timeline-segment');
+        const adviceContentDiv = document.getElementById('advice-content');
+        const viewTabs = document.querySelectorAll('.view-tab');
+        const viewContents = document.querySelectorAll('.view-content');
+        const calendarContainer = document.getElementById('calendar-grid-container');
+        const ganttContainer = document.getElementById('gantt-chart-container');
+        const calendarLegendContainer = document.getElementById('calendar-legend');
+        const ganttLegendContainer = document.getElementById('gantt-legend');
+        // Modal elements are removed
+
+
+        // --- Functions ---
+
+        // Function to display timeline advice
+        function displayTimelineAdvice(phaseKey) {
+            const phaseData = jetLagPlan[phaseKey];
+            if (!phaseData) {
+                adviceContentDiv.innerHTML = '<p class="text-red-500 text-center">Could not load advice for this phase.</p>';
+                return;
+            }
+            let contentHtml = `
+                <h2 class="text-xl md:text-2xl font-semibold mb-1 text-indigo-700">${phaseData.title}</h2>
+                <p class="text-sm text-gray-500 mb-3">${phaseData.dates}</p>
+                <p class="text-md font-semibold text-blue-600 mb-4">${phaseData.goal}</p>
+                <div class="space-y-3">`;
+            if (phaseData.advice && Array.isArray(phaseData.advice)) {
+                phaseData.advice.forEach(item => {
+                    contentHtml += `
+                        <div class="advice-item">
+                            <div class="advice-icon"><i class="${item.icon} fa-lg"></i></div>
+                            <div class="text-sm md:text-base text-gray-700">${item.text}</div>
+                        </div>`;
+                });
+            } else {
+                 contentHtml += `<p class="text-gray-500">No specific advice items available for this phase.</p>`;
+            }
+            contentHtml += `</div>`;
+            adviceContentDiv.innerHTML = contentHtml;
+            // Also update the active state of the timeline button
+            timelineSegments.forEach(segment => {
+                segment.classList.toggle('active', segment.dataset.phase === phaseKey);
+            });
+        }
+
+        // Function to generate Legend HTML
+        function generateLegendHtml() {
+            let legendHtml = '<h3 class="font-semibold text-sm mb-2 text-gray-700">Legend:</h3>';
+             Object.values(jetLagPlan).forEach(phase => {
+                 const colorClass = phase.ganttColorClass || phase.calendarEventClass.replace('event-', 'bg-');
+                 legendHtml += `
+                    <div class="legend-item">
+                        <span class="legend-color-box ${colorClass}"></span>
+                        <span>Phase ${phase.phaseNumber}: ${phase.title.split(':')[1].trim()}</span>
+                    </div>
+                 `;
+             });
+             return legendHtml;
+        }
+
+
+        // Function to generate Calendar View (Adds data-phase-key)
+        function displayCalendarView() {
+            const daysInMonth = new Date(YEAR, MONTH + 1, 0).getDate();
+            const firstDayOfMonth = new Date(YEAR, MONTH, 1).getDay();
+            const adjustedFirstDay = (firstDayOfMonth === 0) ? 6 : firstDayOfMonth - 1;
+
+            let calendarHtml = '<div class="calendar-grid">';
+            const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            daysOfWeek.forEach(day => { calendarHtml += `<div class="calendar-header">${day}</div>`; });
+            for (let i = 0; i < adjustedFirstDay; i++) { calendarHtml += '<div class="calendar-day other-month"></div>'; }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                let dayClasses = 'calendar-day';
+                let eventHtml = '';
+
+                 Object.entries(jetLagPlan).forEach(([phaseKey, phase]) => {
+                     if (day >= phase.startDay && day <= phase.endDay) {
+                         let labelText = `Phase ${phase.phaseNumber}`;
+                         // Add data-phase-key back to the span for click handling
+                         if (day === phase.startDay || (day === 1 && phase.startDay === 1) || (day - phase.startDay) % 4 === 0 ) {
+                              eventHtml += `<span class="calendar-event ${phase.calendarEventClass}" data-phase-key="${phaseKey}">${labelText}</span>`;
+                         } else {
+                              eventHtml += `<span class="calendar-event ${phase.calendarEventClass} opacity-60" data-phase-key="${phaseKey}">&nbsp;</span>`;
+                         }
+                     }
+                });
+
+                 if (day === CURRENT_DAY) dayClasses += ' border-2 border-blue-500';
+
+                calendarHtml += `<div class="${dayClasses}">
+                                    <div class="day-number">${day}</div>
+                                    ${eventHtml}
+                                 </div>`;
+            }
+             const totalCells = adjustedFirstDay + daysInMonth;
+             const remainingCells = (7 - (totalCells % 7)) % 7;
+              for (let i = 0; i < remainingCells; i++) { calendarHtml += '<div class="calendar-day other-month"></div>'; }
+
+            calendarHtml += '</div>';
+            calendarContainer.innerHTML = calendarHtml;
+            calendarLegendContainer.innerHTML = generateLegendHtml();
+        }
+
+        // Function to generate Gantt View (No changes needed here)
+        function displayGanttView() {
+            const ganttStartDate = 13;
+            const ganttEndDate = 28;
+            const totalDays = ganttEndDate - ganttStartDate + 1;
+
+            let labelsHtml = '<div class="gantt-labels" style="grid-template-columns: repeat(' + totalDays + ', minmax(0, 1fr));">';
+            let gridHtml = '<div class="gantt-grid" style="grid-template-columns: repeat(' + totalDays + ', minmax(0, 1fr));">';
+            let barsHtml = '';
+
+            for (let i = 0; i < totalDays; i++) {
+                const day = ganttStartDate + i;
+                labelsHtml += `<div class="gantt-label">Apr ${day}</div>`;
+                gridHtml += `<div class="gantt-grid-line"></div>`;
+            }
+            labelsHtml += '</div>';
+            gridHtml += '</div>';
+
+            Object.entries(jetLagPlan).forEach(([phaseKey, phase]) => {
+                const startOffset = phase.startDay - ganttStartDate;
+                const duration = phase.endDay - phase.startDay + 1;
+
+                if (startOffset < totalDays && startOffset + duration > 0) {
+                    const barStart = Math.max(0, startOffset);
+                    const barEnd = Math.min(totalDays, startOffset + duration);
+                    const barDuration = barEnd - barStart;
+
+                    const leftPercent = (barStart / totalDays) * 100;
+                    const widthPercent = (barDuration / totalDays) * 100;
+
+                    barsHtml += `
+                        <div class="gantt-row">
+                            <div class="gantt-bar ${phase.ganttColorClass}"
+                                 style="left: ${leftPercent}%; width: ${widthPercent}%; top: 0.75rem;">
+                                <span class="px-2">Phase ${phase.phaseNumber}</span>
+                            </div>
+                        </div>`;
+                }
+            });
+
+            ganttContainer.innerHTML = labelsHtml + '<div class="gantt-chart">' + gridHtml + barsHtml + '</div>';
+            ganttLegendContainer.innerHTML = generateLegendHtml();
+        }
+
+        // Function to switch views
+        function switchView(viewId) {
+            viewContents.forEach(content => {
+                content.classList.toggle('hidden', content.id !== `${viewId}-view`);
+            });
+            viewTabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.view === viewId);
+            });
+
+            // Generate content only if the view is empty
+            if (viewId === 'calendar' && calendarContainer.innerHTML.trim() === '') {
+                displayCalendarView();
+            } else if (viewId === 'gantt' && ganttContainer.innerHTML.trim() === '') {
+                displayGanttView();
+            }
+        }
+
+        // --- Event Listeners ---
+        // Timeline phase selection
+        timelineSegments.forEach(segment => {
+            segment.addEventListener('click', () => {
+                displayTimelineAdvice(segment.dataset.phase);
+            });
+        });
+
+        // View switcher tabs
+        viewTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                switchView(tab.dataset.view);
+            });
+        });
+
+        // Click listener ONLY for Calendar View (New Logic)
+        calendarContainer.addEventListener('click', (event) => {
+            const targetElement = event.target.closest('[data-phase-key]'); // Find clicked phase element
+            if (targetElement) {
+                const phaseKey = targetElement.dataset.phaseKey;
+                // 1. Switch view to 'timeline'
+                switchView('timeline');
+                // 2. Display the advice for the clicked phase in the timeline view
+                // Use setTimeout to ensure the view switch has rendered before updating advice,
+                // although it might work without it in many cases. 10ms is usually enough.
+                setTimeout(() => {
+                     displayTimelineAdvice(phaseKey);
+                }, 10);
+            }
+        });
+
+        // --- Initial Load ---
+        displayTimelineAdvice('pre-paris-ny');
+        switchView('timeline'); // Start on timeline view
+
+    </script>
+
+</body>
+</html>
